@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Media Intelligence Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Visualization & Content Choices: 
+        1. Sentiment Breakdown: Goal=Inform. Method=Doughnut Chart (Chart.js) to show proportions. Interaction=Hover for details. Justification=Clear visual for parts-of-a-whole data.
+        2. Engagement Trend: Goal=Change. Method=Line Chart (Chart.js) for time-series data. Interaction=Hover for specific date values, zoom/pan via rangeslider simulation. Justification=Standard and effective for showing trends.
+        3. Platform Engagements: Goal=Compare. Method=Horizontal Bar Chart (Chart.js) for clear label reading. Interaction=Hover for exact numbers. Justification=Effectively ranks platforms by performance.
+        4. Media Type Mix: Goal=Inform. Method=Pie Chart (Chart.js). Interaction=Hover for details. Justification=Simple and direct for showing composition.
+        5. Top Locations: Goal=Compare. Method=Vertical Bar Chart (Chart.js). Interaction=Hover for exact counts. Justification=Best for ranked categorical data.
+        All insights are dynamically generated as text blocks alongside their respective charts.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .file-upload-label {
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Interactive Media Intelligence Dashboard</h1>
+            <p class="mt-2 text-lg text-gray-600">Upload your CSV file to generate the interactive report.</p>
+            <div class="mt-6">
+                <label for="csvFileInput" class="file-upload-label inline-block bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-700 focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                    <span>⬆️ Upload CSV File</span>
+                </label>
+                <input type="file" id="csvFileInput" class="hidden" accept=".csv">
+            </div>
+            <div id="file-info" class="mt-2 text-sm text-gray-500">No file selected.</div>
+        </header>
+        
+        <main id="dashboard-content" class="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+            
+            <div id="sentiment-card" class="bg-white p-6 rounded-xl shadow-lg transition-all duration-500 opacity-50">
+                <h2 class="text-xl font-semibold mb-4 text-gray-900">Sentiment Breakdown</h2>
+                <div class="flex flex-col md:flex-row gap-4 items-center">
+                    <div class="chart-container w-full md:w-1/2">
+                        <canvas id="sentimentChart"></canvas>
+                    </div>
+                    <div id="sentiment-insights" class="w-full md:w-1/2 text-gray-600 text-sm">
+                        <p>Upload a file to see insights.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="engagement-trend-card" class="bg-white p-6 rounded-xl shadow-lg transition-all duration-500 opacity-50">
+                <h2 class="text-xl font-semibold mb-4 text-gray-900">Engagement Trend Over Time</h2>
+                 <div class="chart-container">
+                    <canvas id="engagementTrendChart"></canvas>
+                </div>
+                <div id="engagement-trend-insights" class="mt-4 text-gray-600 text-sm">
+                    <p>Upload a file to see insights.</p>
+                </div>
+            </div>
+
+            <div id="platform-card" class="bg-white p-6 rounded-xl shadow-lg transition-all duration-500 opacity-50">
+                <h2 class="text-xl font-semibold mb-4 text-gray-900">Engagements by Platform</h2>
+                 <div class="chart-container">
+                    <canvas id="platformEngagementsChart"></canvas>
+                </div>
+                 <div id="platform-insights" class="mt-4 text-gray-600 text-sm">
+                    <p>Upload a file to see insights.</p>
+                </div>
+            </div>
+
+            <div id="media-type-card" class="bg-white p-6 rounded-xl shadow-lg transition-all duration-500 opacity-50">
+                <h2 class="text-xl font-semibold mb-4 text-gray-900">Media Type Mix</h2>
+                 <div class="flex flex-col md:flex-row gap-4 items-center">
+                    <div class="chart-container w-full md:w-1/2">
+                        <canvas id="mediaTypeChart"></canvas>
+                    </div>
+                    <div id="media-type-insights" class="w-full md:w-1/2 text-gray-600 text-sm">
+                       <p>Upload a file to see insights.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="location-card" class="bg-white p-6 rounded-xl shadow-lg transition-all duration-500 opacity-50 lg:col-span-2">
+                <h2 class="text-xl font-semibold mb-4 text-gray-900">Top 5 Locations by Mentions</h2>
+                <div class="chart-container">
+                    <canvas id="topLocationsChart"></canvas>
+                </div>
+                <div id="location-insights" class="mt-4 text-gray-600 text-sm">
+                    <p>Upload a file to see insights.</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('csvFileInput');
+        const fileInfo = document.getElementById('file-info');
+        
+        let chartInstances = {};
+
+        const chartColors = {
+            primary: 'rgba(79, 70, 229, 0.8)',
+            secondary: 'rgba(30, 64, 175, 0.8)',
+            accent: 'rgba(219, 39, 119, 0.8)',
+            neutral: 'rgba(107, 114, 128, 0.8)',
+            light: 'rgba(229, 231, 235, 0.8)',
+            pie: ['rgba(79, 70, 229, 0.8)', 'rgba(219, 39, 119, 0.8)', 'rgba(245, 158, 11, 0.8)', 'rgba(16, 185, 129, 0.8)', 'rgba(139, 92, 246, 0.8)']
+        };
+        
+        const requiredColumns = ['Date', 'Platform', 'Sentiment', 'Location', 'Engagements', 'Media Type'];
+        
+        fileInput.addEventListener('change', event => {
+            const file = event.target.files[0];
+            if (!file) {
+                fileInfo.textContent = 'No file selected.';
+                return;
+            }
+
+            if (file.type !== 'text/csv') {
+                fileInfo.textContent = `Error: Please upload a valid .csv file.`;
+                fileInfo.classList.add('text-red-500');
+                return;
+            }
+
+            fileInfo.textContent = `Selected: ${file.name}`;
+            fileInfo.classList.remove('text-red-500');
+
+            const reader = new FileReader();
+            reader.onload = e => {
+                const text = e.target.result;
+                processData(text);
+            };
+            reader.readAsText(file);
+        });
+
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const header = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const data = lines.slice(1).map(line => {
+                const values = line.split(',');
+                let obj = {};
+                header.forEach((h, i) => {
+                    obj[h] = values[i] ? values[i].trim().replace(/"/g, '') : '';
+                });
+                return obj;
+            });
+            return { header, data };
+        }
+
+        function processData(csvText) {
+            const { header, data } = parseCSV(csvText);
+
+            const missingColumns = requiredColumns.filter(col => !header.includes(col));
+            if (missingColumns.length > 0) {
+                fileInfo.textContent = `Error: CSV is missing required columns: ${missingColumns.join(', ')}`;
+                fileInfo.classList.add('text-red-500');
+                return;
+            }
+
+            const cleanData = data.map(row => {
+                return {
+                    date: new Date(row.Date),
+                    platform: row.Platform,
+                    sentiment: row.Sentiment,
+                    location: row.Location,
+                    engagements: row.Engagements ? parseInt(row.Engagements, 10) : 0,
+                    media_type: row['Media Type']
+                };
+            }).filter(row => !isNaN(row.date.getTime()));
+
+            document.querySelectorAll('#dashboard-content > div').forEach(el => {
+                el.classList.remove('opacity-50');
+                el.classList.add('opacity-100');
+            });
+            
+            updateDashboard(cleanData);
+        }
+        
+        function destroyCharts() {
+            for (const chartId in chartInstances) {
+                if (chartInstances[chartId]) {
+                    chartInstances[chartId].destroy();
+                }
+            }
+            chartInstances = {};
+        }
+
+        function updateDashboard(data) {
+            destroyCharts();
+
+            updateSentimentChart(data);
+            updateEngagementTrendChart(data);
+            updatePlatformEngagementsChart(data);
+            updateMediaTypeChart(data);
+            updateTopLocationsChart(data);
+        }
+
+        function updateSentimentChart(data) {
+            const sentimentCounts = data.reduce((acc, row) => {
+                acc[row.sentiment] = (acc[row.sentiment] || 0) + 1;
+                return acc;
+            }, {});
+            const total = data.length;
+            const positivePercent = ((sentimentCounts.Positive || 0) / total * 100).toFixed(1);
+            const negativePercent = ((sentimentCounts.Negative || 0) / total * 100).toFixed(1);
+            const neutralPercent = ((sentimentCounts.Neutral || 0) / total * 100).toFixed(1);
+
+            const insightsDiv = document.getElementById('sentiment-insights');
+            insightsDiv.innerHTML = `
+                <h3 class="font-semibold text-base mb-2">Key Insights</h3>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>Overall distribution is <strong>${positivePercent}%</strong> Positive, <strong>${negativePercent}%</strong> Negative, and <strong>${neutralPercent}%</strong> Neutral.</li>
+                    <li>The dominant sentiment is <strong>${Object.keys(sentimentCounts).reduce((a, b) => sentimentCounts[a] > sentimentCounts[b] ? a : b)}</strong>.</li>
+                    <li>This balance reflects the general public perception in the dataset.</li>
+                </ul>`;
+            
+            const ctx = document.getElementById('sentimentChart').getContext('2d');
+            chartInstances.sentiment = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(sentimentCounts),
+                    datasets: [{
+                        data: Object.values(sentimentCounts),
+                        backgroundColor: chartColors.pie,
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 12 } } },
+                        title: { display: false }
+                    }
+                }
+            });
+        }
+        
+        function updateEngagementTrendChart(data) {
+            const trendData = data.reduce((acc, row) => {
+                const dateStr = row.date.toISOString().split('T')[0];
+                acc[dateStr] = (acc[dateStr] || 0) + row.engagements;
+                return acc;
+            }, {});
+            
+            const sortedDates = Object.keys(trendData).sort();
+            const labels = sortedDates;
+            const values = sortedDates.map(date => trendData[date]);
+            
+            let maxEng = { value: -1, date: ''};
+            let minEng = { value: Infinity, date: ''};
+            let totalEng = 0;
+            
+            for(let i = 0; i < values.length; i++) {
+                if(values[i] > maxEng.value) {
+                    maxEng.value = values[i];
+                    maxEng.date = labels[i];
+                }
+                if(values[i] < minEng.value) {
+                    minEng.value = values[i];
+                    minEng.date = labels[i];
+                }
+                totalEng += values[i];
+            }
+
+            const insightsDiv = document.getElementById('engagement-trend-insights');
+            insightsDiv.innerHTML = `
+                <h3 class="font-semibold text-base mb-2">Key Insights</h3>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>Peak engagement of <strong>${maxEng.value.toLocaleString()}</strong> occurred on <strong>${new Date(maxEng.date).toLocaleDateString()}</strong>.</li>
+                    <li>Lowest engagement was <strong>${minEng.value.toLocaleString()}</strong> on <strong>${new Date(minEng.date).toLocaleDateString()}</strong>.</li>
+                    <li>Average daily engagement across this period is <strong>${(totalEng / values.length).toFixed(0).toLocaleString()}</strong>.</li>
+                </ul>`;
+
+            const ctx = document.getElementById('engagementTrendChart').getContext('2d');
+            chartInstances.engagementTrend = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets: [{
+                        label: 'Total Engagements',
+                        data: values,
+                        borderColor: chartColors.primary,
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        fill: true,
+                        tension: 0.1
+                }]},
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 10 } }, y: { beginAtZero: true } } }
+            });
+        }
+
+        function updatePlatformEngagementsChart(data) {
+            const platformData = data.reduce((acc, row) => {
+                acc[row.platform] = (acc[row.platform] || 0) + row.engagements;
+                return acc;
+            }, {});
+
+            const sortedPlatforms = Object.entries(platformData).sort((a, b) => b[1] - a[1]);
+            
+            const insightsDiv = document.getElementById('platform-insights');
+            insightsDiv.innerHTML = `
+                <h3 class="font-semibold text-base mb-2">Key Insights</h3>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>Top performing platform is <strong>${sortedPlatforms[0][0]}</strong> with <strong>${sortedPlatforms[0][1].toLocaleString()}</strong> engagements.</li>
+                    <li>The least performing platform is <strong>${sortedPlatforms[sortedPlatforms.length - 1][0]}</strong> with <strong>${sortedPlatforms[sortedPlatforms.length - 1][1].toLocaleString()}</strong> engagements.</li>
+                    <li>This highlights where audience interaction is strongest and where strategies may need review.</li>
+                </ul>`;
+
+            const ctx = document.getElementById('platformEngagementsChart').getContext('2d');
+            chartInstances.platformEngagements = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sortedPlatforms.map(p => p[0]),
+                    datasets: [{
+                        label: 'Total Engagements',
+                        data: sortedPlatforms.map(p => p[1]),
+                        backgroundColor: chartColors.pie,
+                        borderColor: '#ffffff',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateMediaTypeChart(data) {
+            const mediaTypeCounts = data.reduce((acc, row) => {
+                acc[row.media_type] = (acc[row.media_type] || 0) + 1;
+                return acc;
+            }, {});
+
+            const sortedMedia = Object.entries(mediaTypeCounts).sort((a,b) => b[1] - a[1]);
+            const total = data.length;
+
+            const insightsDiv = document.getElementById('media-type-insights');
+            insightsDiv.innerHTML = `
+                <h3 class="font-semibold text-base mb-2">Key Insights</h3>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>The dominant media type is <strong>${sortedMedia[0][0]}</strong>, making up <strong>${(sortedMedia[0][1] / total * 100).toFixed(1)}%</strong> of content.</li>
+                    <li>The least common type is <strong>${sortedMedia[sortedMedia.length - 1][0]}</strong>.</li>
+                    <li>This mix shows the current content strategy focus.</li>
+                </ul>`;
+
+            const ctx = document.getElementById('mediaTypeChart').getContext('2d');
+            chartInstances.mediaType = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(mediaTypeCounts),
+                    datasets: [{
+                        data: Object.values(mediaTypeCounts),
+                        backgroundColor: chartColors.pie.slice(0, Object.keys(mediaTypeCounts).length),
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } }
+                }
+            });
+        }
+
+        function updateTopLocationsChart(data) {
+            const locationCounts = data.reduce((acc, row) => {
+                acc[row.location] = (acc[row.location] || 0) + 1;
+                return acc;
+            }, {});
+            
+            const top5 = Object.entries(locationCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            
+            const insightsDiv = document.getElementById('location-insights');
+            insightsDiv.innerHTML = `
+                <h3 class="font-semibold text-base mb-2">Key Insights</h3>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>The primary geographic area of discussion is <strong>${top5[0] ? top5[0][0] : 'N/A'}</strong> with <strong>${top5[0] ? top5[0][1].toLocaleString() : 0}</strong> mentions.</li>
+                    <li>The top locations indicate where the brand or topic has the strongest voice.</li>
+                    <li>This data can inform geographically targeted marketing and communication efforts.</li>
+                </ul>`;
+
+            const ctx = document.getElementById('topLocationsChart').getContext('2d');
+            chartInstances.topLocations = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: top5.map(l => l[0]),
+                    datasets: [{
+                        label: 'Number of Mentions',
+                        data: top5.map(l => l[1]),
+                        backgroundColor: chartColors.secondary,
+                        borderRadius: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+    </script>
+</body>
+</html>
